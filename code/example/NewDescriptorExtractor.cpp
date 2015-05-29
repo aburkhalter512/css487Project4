@@ -272,6 +272,14 @@ namespace cv
 		}
 	}
 
+	static float calcColorHist(const Mat& img, Point pt, int radius,
+		float sigma, int* hist, int bucketCount)
+	{
+		int i, j, k, len = (radius * 2 + 1)*(radius * 2 + 1);
+
+		//step 1: allocate necessary memory/initialize values
+		int* 
+	}
 
 	// Computes a gradient orientation histogram at a specified pixel
 	static float calcOrientationHist(const Mat& img, Point pt, int radius,
