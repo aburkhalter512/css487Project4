@@ -272,13 +272,69 @@ namespace cv
 		}
 	}
 
-	static float calcColorHist(const Mat& img, Point pt, int radius,
-		float sigma, int* hist, int bucketCount)
-	{
-		int i, j, k, len = (radius * 2 + 1)*(radius * 2 + 1);
 
+	/*
+	//Mat& img --- source image
+	//Point pt --- center point
+	//int radius --- radius of keypoint area
+	//float sigma --- data on keypoint size and blur level
+	//int* hist --- histogram of colors, smoothed around the center pt
+	//int bucketCount --- number of buckets for each color in the hist
+	*/
+	static float calcColorHist(const Mat& img, Point pt, int radius,
+		float sigma, float* hist, int bucketCount)
+	{
 		//step 1: allocate necessary memory/initialize values
-		int* 
+		int len = (radius * 2 + 1)*(radius * 2 + 1);
+		float gaussScale = -1.f / (2.f * sigma * sigma);
+		float *gaussWeight = new float[len];
+		const int R = 0;
+		const int G = 1;
+		const int B = 2;
+		int bucketIndex[3] = { 0, 0, 0 };
+		int k;
+
+		//Process each pixel in a radius around the center pixel:
+		//	1. Collect color data from each pixel
+		//	2. Weight its importance according to distance using a guassian ratio
+		for (int i = -radius, k = 0; i <= radius; i++)
+		{
+			int y = pt.y + i;
+			if (y <= 0 || y >= img.rows - 1)
+				continue;
+			for (int j = -radius; j <= radius; j++)
+			{
+				int x = pt.x + j;
+				if (x <= 0 || x >= img.cols - 1)
+					continue;
+				
+				//put smoothed pixel color values into correct buckets
+				for (int color = R; color <= B; color++)
+				{
+					bucketIndex[color] =
+						  .5  * img.at<Vec3b>(y, x)[color]
+						* .25 * img.at<Vec3b>(y, x)[(color - 1) % B]
+						* .25 * img.at<Vec3b>(y, x)[(color + 1) % B]
+						* bucketCount / 256;
+				}
+
+				//make gaussian weight ratios for each pixel in the keypoint area
+				gaussWeight[k] = exp((i*i + j*j)*gaussScale);
+
+				//add weighted buckets to 1D histogram
+				hist[bucketIndex[R] + bucketCount * bucketIndex[G] + bucketCount * bucketCount * bucketIndex[B]]+= gaussWeight[k];
+
+				k++;
+			}
+		}
+
+		delete[] gaussWeight;
+
+		float maxval = hist[0];
+		for (int i = 1; i < bucketCount; i++)
+			maxval = std::max(maxval, hist[i]);
+
+		return maxval;
 	}
 
 	// Computes a gradient orientation histogram at a specified pixel
