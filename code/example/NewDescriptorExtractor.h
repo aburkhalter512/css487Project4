@@ -49,6 +49,7 @@
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/core/internal.hpp"
+#include "SIFTColorKeypoint.h"
 
 #ifdef __cplusplus
 

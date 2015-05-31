@@ -106,6 +106,8 @@ Below is the original copyright.
 #include <iostream>
 #include <stdarg.h>
 
+#define INDEX_3D_TO_1D(i, j, k, dimensionSize) i + dimensionSize * j + dimensionSize * dimensionSize * k
+
 namespace cv
 {
 	CV_INIT_ALGORITHM(NEWSIFT, "Feature2D.NEWSIFT",
@@ -292,7 +294,6 @@ namespace cv
 		const int G = 1;
 		const int B = 2;
 		int bucketIndex[3] = { 0, 0, 0 };
-		int k;
 
 		//Process each pixel in a radius around the center pixel:
 		//	1. Collect color data from each pixel
@@ -311,11 +312,11 @@ namespace cv
 				//put smoothed pixel color values into correct buckets
 				for (int color = R; color <= B; color++)
 				{
-					bucketIndex[color] =
-						  .5  * img.at<Vec3b>(y, x)[color]
+					bucketIndex[color] = (int)
+						  (.5  * img.at<Vec3b>(y, x)[color]
 						* .25 * img.at<Vec3b>(y, x)[(color - 1) % B]
 						* .25 * img.at<Vec3b>(y, x)[(color + 1) % B]
-						* bucketCount / 256;
+						* bucketCount / 256);
 				}
 
 				//make gaussian weight ratios for each pixel in the keypoint area
@@ -524,6 +525,9 @@ namespace cv
 		int threshold = cvFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * NEWSIFT_FIXPT_SCALE);
 		const int n = NEWSIFT_ORI_HIST_BINS;
 		float hist[n];
+		const int COLOR_HIST_BUCKET_COUNT = 2;
+		float colorHist[COLOR_HIST_BUCKET_COUNT];
+		SIFTColorKeypoint colorKeypoint;
 		KeyPoint kpt;
 
 		keypoints.clear();
@@ -575,7 +579,82 @@ namespace cv
 							(float)edgeThreshold, (float)sigma))
 							continue;
 						float scl_octv = kpt.size*0.5f / (1 << o);
-						float omax = calcOrientationHist(gauss_pyr[o*(nOctaveLayers + 3) + layer],
+						float colorMax = calcColorHist(gauss_pyr[o*(nOctaveLayers + 3) + layer],
+							Point(c1, r1),
+							cvRound(NEWSIFT_ORI_RADIUS * scl_octv),
+							NEWSIFT_ORI_SIG_FCTR * scl_octv,
+							colorHist, COLOR_HIST_BUCKET_COUNT);
+						float colorThreshold = (float)(colorMax * NEWSIFT_ORI_PEAK_RATIO);
+
+						// Indices, not values
+						int aroundI[2];
+						int aroundJ[2];
+						int aroundK[2];
+						// Values, not indices, 0,1 are i values; 2,3 are j values; 4,5 are k values
+						float surroudingVals[6];
+
+						#define PREV 0
+						#define NEXT 1
+						#define PREV_I 0
+						#define NEXT_I 1
+						#define PREV_J 2
+						#define NEXT_J 3
+						#define PREV_K 4
+						#define NEXT_K 5
+						for (int i = 0; i < COLOR_HIST_BUCKET_COUNT; i++)
+						{
+							aroundI[PREV] = (i == 0) ? COLOR_HIST_BUCKET_COUNT - 1 : i - 1;
+							aroundI[NEXT] = (i == COLOR_HIST_BUCKET_COUNT - 1) ? 0 : i + 1;
+							for (int j = 0; j < COLOR_HIST_BUCKET_COUNT; j++)
+							{
+								aroundJ[PREV] = (j == 0) ? COLOR_HIST_BUCKET_COUNT - 1 : j - 1;
+								aroundJ[NEXT] = (j == COLOR_HIST_BUCKET_COUNT - 1) ? 0 : j + 1;
+
+								for (int k = 0; k < COLOR_HIST_BUCKET_COUNT; k++)
+								{
+									aroundK[PREV] = (k == 0) ? COLOR_HIST_BUCKET_COUNT - 1 : k - 1;
+									aroundK[NEXT] = (k == COLOR_HIST_BUCKET_COUNT - 1) ? 0 : k + 1;
+
+									int index = INDEX_3D_TO_1D(i, j, k, COLOR_HIST_BUCKET_COUNT);
+									surroudingVals[PREV_I] = colorHist[INDEX_3D_TO_1D(aroundI[PREV], j, k, COLOR_HIST_BUCKET_COUNT)];
+									surroudingVals[NEXT_I] = colorHist[INDEX_3D_TO_1D(aroundI[NEXT], j, k, COLOR_HIST_BUCKET_COUNT)];
+									surrouding
+
+									if ( // Compare previous and next x-axis values in the hist
+										 < colorHist[index] &&
+										colorHist[INDEX_3D_TO_1D(aroundI[NEXT], j, k, COLOR_HIST_BUCKET_COUNT)] < colorHist[index] &&
+										// Compare previous and next y-axis values in the hist
+										colorHist[INDEX_3D_TO_1D(i, aroundJ[PREV], k, COLOR_HIST_BUCKET_COUNT)] < colorHist[index] &&
+										colorHist[INDEX_3D_TO_1D(i, aroundJ[NEXT], k, COLOR_HIST_BUCKET_COUNT)] < colorHist[index] &&
+										// Compare previous and next z-axis values in the hist
+										colorHist[INDEX_3D_TO_1D(i, j, aroundK[PREV], COLOR_HIST_BUCKET_COUNT)] < colorHist[index] &&
+										colorHist[INDEX_3D_TO_1D(i, j, aroundK[NEXT], COLOR_HIST_BUCKET_COUNT)] < colorHist[index])
+									{
+										float red = i + 0.5f * 
+											(colorHist[INDEX_3D_TO_1D(aroundI[PREV], j, k, COLOR_HIST_BUCKET_COUNT)] - colorHist[INDEX_3D_TO_1D(aroundI[NEXT], j, k, COLOR_HIST_BUCKET_COUNT)]) / 
+
+									}
+								}
+							}
+						}
+						for (int j = 0; j < n; j++)
+						{
+							int prev = j > 0 ? j - 1 : n - 1;
+							int next = j < n - 1 ? j + 1 : 0;
+
+							if (colorHist[j] > colorHist[prev] &&
+								colorHist[j] > colorHist[r2] && 
+								colorHist[j] >= colorThreshold)
+							{
+								float bin = j + 0.5f * (hist[l] - hist[r2]) / (hist[l] - 2 * hist[j] + hist[r2]);
+								bin = bin < 0 ? n + bin : bin >= n ? bin - n : bin;
+								kpt.angle = 360.f - (float)((360.f / n) * bin);
+								if (std::abs(kpt.angle - 360.f) < FLT_EPSILON)
+									kpt.angle = 0.f;
+								keypoints.push_back(kpt);
+							}
+						}
+						/*float omax = calcOrientationHist(gauss_pyr[o*(nOctaveLayers + 3) + layer],
 							Point(c1, r1),
 							cvRound(NEWSIFT_ORI_RADIUS * scl_octv),
 							NEWSIFT_ORI_SIG_FCTR * scl_octv,
@@ -595,13 +674,12 @@ namespace cv
 									kpt.angle = 0.f;
 								keypoints.push_back(kpt);
 							}
-						}
+						}*/
 					}
 				}
 			}
 			}
 	}
-
 
 	static void calcNEWSIFTDescriptor(const Mat& img, Point2f ptf, float ori, float scl,
 		int d, int n, float* dst)
