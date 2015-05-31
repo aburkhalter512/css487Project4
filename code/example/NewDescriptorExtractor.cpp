@@ -591,7 +591,7 @@ namespace cv
 						int aroundJ[2];
 						int aroundK[2];
 						// Values, not indices, 0,1 are i values; 2,3 are j values; 4,5 are k values
-						float surroudingVals[6];
+						float surroundingVals[6];
 
 						#define PREV 0
 						#define NEXT 1
@@ -616,19 +616,22 @@ namespace cv
 									aroundK[NEXT] = (k == COLOR_HIST_BUCKET_COUNT - 1) ? 0 : k + 1;
 
 									int index = INDEX_3D_TO_1D(i, j, k, COLOR_HIST_BUCKET_COUNT);
-									surroudingVals[PREV_I] = colorHist[INDEX_3D_TO_1D(aroundI[PREV], j, k, COLOR_HIST_BUCKET_COUNT)];
-									surroudingVals[NEXT_I] = colorHist[INDEX_3D_TO_1D(aroundI[NEXT], j, k, COLOR_HIST_BUCKET_COUNT)];
-									surrouding
+									surroundingVals[PREV_I] = colorHist[INDEX_3D_TO_1D(aroundI[PREV], j, k, COLOR_HIST_BUCKET_COUNT)];
+									surroundingVals[NEXT_I] = colorHist[INDEX_3D_TO_1D(aroundI[NEXT], j, k, COLOR_HIST_BUCKET_COUNT)];
+									surroundingVals[PREV_J] = colorHist[INDEX_3D_TO_1D(i, aroundJ[PREV], k, COLOR_HIST_BUCKET_COUNT)];
+									surroundingVals[NEXT_J] = colorHist[INDEX_3D_TO_1D(i, aroundJ[NEXT], k, COLOR_HIST_BUCKET_COUNT)];
+									surroundingVals[PREV_K] = colorHist[INDEX_3D_TO_1D(i, j, aroundK[PREV], COLOR_HIST_BUCKET_COUNT)];
+									surroundingVals[NEXT_K] = colorHist[INDEX_3D_TO_1D(i, j, aroundK[NEXT], COLOR_HIST_BUCKET_COUNT)];
 
 									if ( // Compare previous and next x-axis values in the hist
-										 < colorHist[index] &&
-										colorHist[INDEX_3D_TO_1D(aroundI[NEXT], j, k, COLOR_HIST_BUCKET_COUNT)] < colorHist[index] &&
+										surroundingVals[PREV_I] < colorHist[index] &&
+										surroundingVals[NEXT_I] < colorHist[index] &&
 										// Compare previous and next y-axis values in the hist
-										colorHist[INDEX_3D_TO_1D(i, aroundJ[PREV], k, COLOR_HIST_BUCKET_COUNT)] < colorHist[index] &&
-										colorHist[INDEX_3D_TO_1D(i, aroundJ[NEXT], k, COLOR_HIST_BUCKET_COUNT)] < colorHist[index] &&
+										surroundingVals[PREV_J] < colorHist[index] &&
+										surroundingVals[NEXT_J] < colorHist[index] &&
 										// Compare previous and next z-axis values in the hist
-										colorHist[INDEX_3D_TO_1D(i, j, aroundK[PREV], COLOR_HIST_BUCKET_COUNT)] < colorHist[index] &&
-										colorHist[INDEX_3D_TO_1D(i, j, aroundK[NEXT], COLOR_HIST_BUCKET_COUNT)] < colorHist[index])
+										surroundingVals[PREV_K] < colorHist[index] &&
+										surroundingVals[NEXT_K] < colorHist[index])
 									{
 										float red = i + 0.5f * 
 											(colorHist[INDEX_3D_TO_1D(aroundI[PREV], j, k, COLOR_HIST_BUCKET_COUNT)] - colorHist[INDEX_3D_TO_1D(aroundI[NEXT], j, k, COLOR_HIST_BUCKET_COUNT)]) / 
