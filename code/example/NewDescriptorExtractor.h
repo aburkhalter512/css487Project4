@@ -55,7 +55,6 @@
 
 namespace cv
 {
-
 	/*!
 	NEWSIFT implementation.
 
@@ -89,6 +88,8 @@ namespace cv
 		void buildDoGPyramid(const vector<Mat>& pyr, vector<Mat>& dogpyr) const;
 		void findScaleSpaceExtrema(const vector<Mat>& gauss_pyr, const vector<Mat>& dog_pyr,
 			vector<KeyPoint>& keypoints) const;
+		void findScaleSpaceExtrema(const vector<Mat>& gauss_pyr, const vector<Mat>& dog_pyr,
+			vector<SIFTColorKeypoint>& keypoints) const;
 
 	protected:
 		void detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask = Mat()) const;
