@@ -17,7 +17,7 @@ namespace cv
 			: pt(_pt), color(_color),
 			response(_response), octave(_octave), class_id(_class_id) {}
 		//! another form of the full constructor
-		CV_WRAP SIFTColorKeypoint(float x, float y, float _color, float _angle = -1,
+		CV_WRAP SIFTColorKeypoint(float x, float y, Vec3b _color,
 			float _response = 0, int _octave = 0, int _class_id = -1)
 			: pt(x, y), color(_color),
 			response(_response), octave(_octave), class_id(_class_id) {}
