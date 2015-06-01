@@ -31,5 +31,10 @@ namespace cv
 		CV_PROP_RW float response; //!< the response by which the most strong keypoints have been selected. Can be used for the further sorting or subsampling
 		CV_PROP_RW int octave; //!< octave (pyramid layer) from which the keypoint has been extracted
 		CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to)
+
+		// takes keypoints and culls them by the response
+		static void retainBest(vector<SIFTColorKeypoint>& keypoints, int n_points);
+		static void runByPixelsMask( vector<SIFTColorKeypoint>& keypoints, const Mat& mask );
+		static void removeDuplicated( vector<SIFTColorKeypoint>& keypoints );
 	};
 }
