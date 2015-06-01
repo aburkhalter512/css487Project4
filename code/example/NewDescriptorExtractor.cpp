@@ -105,6 +105,7 @@ Below is the original copyright.
 #include "NewDescriptorExtractor.h"
 #include <iostream>
 #include <stdarg.h>
+#include "ColorKeypoint.h"
 
 #define INDEX_3D_TO_1D(i, j, k, dimensionSize) i + dimensionSize * j + dimensionSize * dimensionSize * k
 
@@ -181,7 +182,7 @@ namespace cv
 #endif
 
 	static inline void
-		unpackOctave(const KeyPoint& kpt, int& octave, int& layer, float& scale)
+		unpackOctave(const ColorKeypoint& kpt, int& octave, int& layer, float& scale)
 	{
 		octave = kpt.octave & 255;
 		layer = (kpt.octave >> 8) & 255;
@@ -190,7 +191,7 @@ namespace cv
 	}
 
 	static inline void
-		unpackOctave(const SIFTColorKeypoint& kpt, int& octave, int& layer, float& scale)
+		unpackOctave(const KeyPoint& kpt, int& octave, int& layer, float& scale)
 	{
 		octave = kpt.octave & 255;
 		layer = (kpt.octave >> 8) & 255;
@@ -416,7 +417,7 @@ namespace cv
 		return maxval;
 	}
 
-	static bool adjustLocalExtrema(const vector<Mat>& dog_pyr, SIFTColorKeypoint& kpt, int octv,
+	static bool adjustLocalExtrema(const vector<Mat>& dog_pyr, ColorKeypoint& kpt, int octv,
 		int& layer, int& r, int& c, int nOctaveLayers,
 		float contrastThreshold, float edgeThreshold, float sigma)
 	{
@@ -629,13 +630,13 @@ namespace cv
 	// Detects features at extrema in DoG scale space.  Bad features are discarded
 	// based on contrast and ratio of principal curvatures.
 	void NEWSIFT::findScaleSpaceExtrema(const vector<Mat>& gauss_pyr, const vector<Mat>& dog_pyr,
-		vector<SIFTColorKeypoint>& keypoints) const
+		vector<ColorKeypoint>& keypoints) const
 	{
 		int nOctaves = (int)gauss_pyr.size() / (nOctaveLayers + 3);
 		int threshold = cvFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * NEWSIFT_FIXPT_SCALE);
 		const int COLOR_HIST_BUCKET_COUNT = 2;
 		float colorHist[COLOR_HIST_BUCKET_COUNT * COLOR_HIST_BUCKET_COUNT * COLOR_HIST_BUCKET_COUNT];
-		SIFTColorKeypoint colorKeypoint;
+		ColorKeypoint colorKeypoint;
 
 		keypoints.clear();
 
@@ -1004,7 +1005,7 @@ namespace cv
 	}
 
 
-	static void calcNEWSIFTDescriptor(const Mat& img, Point2f ptf, Vec3b color, float scl,
+	static void calcNEWSIFTDescriptor(const Mat& img, Point2f ptf, float ori, Vec3b color, float scl,
 		int d, int n, float* dst)
 	{
 		Point pt(cvRound(ptf.x), cvRound(ptf.y));
@@ -1146,14 +1147,14 @@ namespace cv
 #endif
 	}
 
-	static void calcDescriptors(const vector<Mat>& gpyr, const vector<SIFTColorKeypoint>& keypoints,
+	static void calcDescriptors(const vector<Mat>& gpyr, const vector<ColorKeypoint>& keypoints,
 		Mat& descriptors, int nOctaveLayers, int firstOctave)
 	{
 		int d = NEWSIFT_DESCR_WIDTH, n = NEWSIFT_DESCR_HIST_BINS;
 
 		for (size_t i = 0; i < keypoints.size(); i++)
 		{
-			SIFTColorKeypoint kpt = keypoints[i];
+			ColorKeypoint kpt = keypoints[i];
 			int octave, layer;
 			float scale;
 			unpackOctave(kpt, octave, layer, scale);
@@ -1161,9 +1162,12 @@ namespace cv
 			float size = kpt.size*scale;
 			Point2f ptf(kpt.pt.x*scale, kpt.pt.y*scale);
 			const Mat& img = gpyr[(octave - firstOctave)*(nOctaveLayers + 3) + layer];
-
+			
+			float angle = 360.f - kpt.angle;
+			if (std::abs(angle - 360.f) < FLT_EPSILON)
+				angle = 0.f;
 			Vec3b color = kpt.color;
-			calcNEWSIFTDescriptor(img, ptf, color, size*0.5f, d, n, descriptors.ptr<float>((int)i));
+			calcNEWSIFTDescriptor(img, ptf, angle, color, size*0.5f, d, n, descriptors.ptr<float>((int)i));
 		}
 	}
 
@@ -1217,7 +1221,7 @@ namespace cv
 	}
 
 	void NEWSIFT::operator()(InputArray _image, InputArray _mask,
-		vector<SIFTColorKeypoint>& keypoints,
+		vector<ColorKeypoint>& keypoints,
 		OutputArray _descriptors,
 		bool useProvidedKeypoints) const
 	{
@@ -1265,17 +1269,17 @@ namespace cv
 		{
 			//t = (double)getTickCount();
 			findScaleSpaceExtrema(gpyr, dogpyr, keypoints);
-			SIFTColorKeypoint::removeDuplicated(keypoints);
+			ColorKeyPointsFilter::removeDuplicated(keypoints);
 
 			if (nfeatures > 0)
-				SIFTColorKeypoint::retainBest(keypoints, nfeatures);
+				ColorKeyPointsFilter::retainBest(keypoints, nfeatures);
 			//t = (double)getTickCount() - t;
 			//printf("keypoint detection time: %g\n", t*1000./tf);
 
 			if (firstOctave < 0)
 				for (size_t i = 0; i < keypoints.size(); i++)
 				{
-					SIFTColorKeypoint& kpt = keypoints[i];
+					ColorKeypoint& kpt = keypoints[i];
 					float scale = 1.f / (float)(1 << -firstOctave);
 					kpt.octave = (kpt.octave & ~255) | ((kpt.octave + firstOctave) & 255);
 					kpt.pt *= scale;
@@ -1283,7 +1287,7 @@ namespace cv
 				}
 
 			if (!mask.empty())
-				SIFTColorKeypoint::runByPixelsMask(keypoints, mask);
+				ColorKeyPointsFilter::runByPixelsMask(keypoints, mask);
 		}
 		else
 		{

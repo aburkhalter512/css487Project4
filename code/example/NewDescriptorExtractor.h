@@ -49,7 +49,7 @@
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/core/internal.hpp"
-#include "SIFTColorKeypoint.h"
+#include "ColorKeypoint.h"
 
 #ifdef __cplusplus
 
@@ -82,7 +82,7 @@ namespace cv
 			OutputArray descriptors,
 			bool useProvidedKeypoints = false) const;
 		void operator()(InputArray img, InputArray mask,
-			vector<SIFTColorKeypoint>& keypoints,
+			vector<ColorKeypoint>& keypoints,
 			OutputArray descriptors,
 			bool useProvidedKeypoints = false) const;
 
@@ -93,7 +93,7 @@ namespace cv
 		void findScaleSpaceExtrema(const vector<Mat>& gauss_pyr, const vector<Mat>& dog_pyr,
 			vector<KeyPoint>& keypoints) const;
 		void findScaleSpaceExtrema(const vector<Mat>& gauss_pyr, const vector<Mat>& dog_pyr,
-			vector<SIFTColorKeypoint>& keypoints) const;
+			vector<ColorKeypoint>& keypoints) const;
 
 	protected:
 		void detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask = Mat()) const;
