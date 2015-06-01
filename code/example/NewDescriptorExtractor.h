@@ -81,6 +81,10 @@ namespace cv
 			vector<KeyPoint>& keypoints,
 			OutputArray descriptors,
 			bool useProvidedKeypoints = false) const;
+		void operator()(InputArray img, InputArray mask,
+			vector<SIFTColorKeypoint>& keypoints,
+			OutputArray descriptors,
+			bool useProvidedKeypoints = false) const;
 
 		AlgorithmInfo* info() const;
 
