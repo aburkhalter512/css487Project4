@@ -1,8 +1,8 @@
 #include "ColorDescriptorExtractor.h"
 
-#define RED 0
+#define RED 2
 #define GREEN 1
-#define BLUE 2
+#define BLUE 0
 #define INDEX_3D_TO_1D(i, j, k, dimensionSize) i + dimensionSize * j + dimensionSize * dimensionSize * k
 #define VEC3_MAG(r, g, b) sqrt(r*r + g*g + b*b)
 
@@ -21,7 +21,7 @@ namespace cv
 	static const int COLOR_DESCR_WIDTH = 4;
 
 	// default number of bins per histogram in descriptor array
-	static const int COLOR_DESCR_HIST_BINS = 2;
+	static const int COLOR_DESCR_HIST_BINS = 4;
 
 	// assumed gaussian blur for input image
 	static const float COLOR_INIT_SIGMA = 0.5f;
@@ -157,9 +157,9 @@ namespace cv
 					for (int color = RED; color <= BLUE; color++)
 					{
 						bucketIndex[color] = (float)
-							(.5  * img.at<Vec3b>(j, i)[color]
-						   * .25 * img.at<Vec3b>(j, i)[color == RED ? BLUE : color - 1]
-						   * .25 * img.at<Vec3b>(j, i)[color == BLUE ? RED : color + 1]);
+							(.5  * img.at<Vec3b>(r, c)[color]
+						   * .25 * img.at<Vec3b>(r,	c)[color == RED ? BLUE : color - 1]
+						   * .25 * img.at<Vec3b>(r, c)[color == BLUE ? RED : color + 1]);
 					}
 
 					CMag[k] = VEC3_MAG(bucketIndex[RED] / 256, bucketIndex[GREEN] / 256, bucketIndex[BLUE] / 256);
@@ -183,7 +183,7 @@ namespace cv
 		{
 			float rbin = RBin[k], cbin = CBin[k];
 			float colorBin = INDEX_3D_TO_1D(RColor[k], GColor[k], BColor[k], dimSize);
-			float mag = CMag[k] * W[k];
+			float mag = /*CMag[k] * */W[k];
 
 			int r0 = cvFloor(rbin);
 			int c0 = cvFloor(cbin);
@@ -193,7 +193,7 @@ namespace cv
 			colorBin -= color0;
 
 			// histogram update using tri-linear interpolation
-			float v_r1 = mag*rbin, v_r0 = mag - v_r1;
+			float v_r1 = /*mag**/rbin, v_r0 = mag - v_r1;
 			float v_rc11 = v_r1*cbin, v_rc10 = v_r1 - v_rc11;
 			float v_rc01 = v_r0*cbin, v_rc00 = v_r0 - v_rc01;
 
