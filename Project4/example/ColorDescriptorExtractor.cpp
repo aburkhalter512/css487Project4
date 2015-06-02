@@ -8,7 +8,14 @@
 
 namespace cv
 {
-		/******************************* Defs and macros *****************************/
+	CV_INIT_ALGORITHM(ColorDescriptorExtractor, "Feature2D.ColorDescriptorExtractor",
+		obj.info()->addParam(obj, "nFeatures", obj.nfeatures);
+		obj.info()->addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
+		obj.info()->addParam(obj, "contrastThreshold", obj.contrastThreshold);
+		obj.info()->addParam(obj, "edgeThreshold", obj.edgeThreshold);
+		obj.info()->addParam(obj, "sigma", obj.sigma))
+
+	/******************************* Defs and macros *****************************/
 
 	// default width of descriptor histogram array
 	static const int COLOR_DESCR_WIDTH = 4;
@@ -88,7 +95,6 @@ namespace cv
 	{
 		return COLOR_DESCR_WIDTH*COLOR_DESCR_WIDTH*COLOR_DESCR_HIST_BINS*COLOR_DESCR_HIST_BINS*COLOR_DESCR_HIST_BINS;
 	}
-
 
 	void ColorDescriptorExtractor::calcColorDescriptor(const Mat& img, Point2f ptf, float ori, float scl,
 		int d, int n, float* dst) const
