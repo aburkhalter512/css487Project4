@@ -99,7 +99,7 @@ namespace cv
 		float exp_scale = -1.f / (d * d * 0.5f);
 		float hist_width = COLOR_DESCR_SCL_FCTR * scl;
 		int radius = cvRound(hist_width * 1.4142135623730951f * (d + 1) * 0.5f);
-		int bucketIndex[3] = { 0, 0, 0 };
+		float bucketIndex[3] = { 0, 0, 0 };
 		int dimSize = n; int sqrDimSize = n * n;
 		n *= n*n;
 		int bufferD = d + 2;
@@ -150,13 +150,13 @@ namespace cv
 					//put smoothed pixel color values into correct buckets
 					for (int color = RED; color <= BLUE; color++)
 					{
-						bucketIndex[color] = (int)
+						bucketIndex[color] = (float)
 							(.5  * img.at<Vec3b>(j, i)[color]
 						   * .25 * img.at<Vec3b>(j, i)[color == RED ? BLUE : color - 1]
 						   * .25 * img.at<Vec3b>(j, i)[color == BLUE ? RED : color + 1]);
 					}
 
-					CMag[k] = VEC3_MAG(bucketIndex[RED], bucketIndex[GREEN], bucketIndex[BLUE]);
+					CMag[k] = VEC3_MAG(bucketIndex[RED] / 256, bucketIndex[GREEN] / 256, bucketIndex[BLUE] / 256);
 
 					RColor[k] = bucketIndex[RED] * dimSize / 256;
 					GColor[k] = bucketIndex[GREEN] * dimSize / 256;
@@ -283,9 +283,7 @@ namespace cv
 
 
 	void ColorDescriptorExtractor::operator()(InputArray _image, InputArray _mask,
-		vector<KeyPoint>& keypoints,
-		OutputArray _descriptors,
-		bool useProvidedKeypoints) const
+		vector<KeyPoint>& keypoints, OutputArray _descriptors, bool useProvidedKeypoints) const
 	{
 		int firstOctave = -1, actualNOctaves = 0, actualNLayers = 0;
 		Mat image = _image.getMat(), mask = _mask.getMat();
@@ -368,15 +366,5 @@ namespace cv
 			//t = (double)getTickCount() - t;
 			//printf("descriptor extraction time: %g\n", t*1000./tf);
 		}
-	}
-
-	void NEWSIFT::detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
-	{
-		(*this)(image, mask, keypoints, noArray());
-	}
-
-	void NEWSIFT::computeImpl(const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const
-	{
-		(*this)(image, Mat(), keypoints, descriptors, true);
 	}
 }

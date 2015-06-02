@@ -81,10 +81,6 @@ namespace cv
 			vector<KeyPoint>& keypoints,
 			OutputArray descriptors,
 			bool useProvidedKeypoints = false) const;
-		virtual void operator()(InputArray img, InputArray mask,
-			vector<ColorKeypoint>& keypoints,
-			OutputArray descriptors,
-			bool useProvidedKeypoints = false) const;
 
 		AlgorithmInfo* info() const;
 
@@ -92,12 +88,10 @@ namespace cv
 		void buildDoGPyramid(const vector<Mat>& pyr, vector<Mat>& dogpyr) const;
 		void findScaleSpaceExtrema(const vector<Mat>& gauss_pyr, const vector<Mat>& dog_pyr,
 			vector<KeyPoint>& keypoints) const;
-		void findScaleSpaceExtrema(const vector<Mat>& gauss_pyr, const vector<Mat>& dog_pyr,
-			vector<ColorKeypoint>& keypoints) const;
 
 	protected:
-		void detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask = Mat()) const;
-		void computeImpl(const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
+		virtual void detectImpl(const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask = Mat()) const;
+		virtual void computeImpl(const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors) const;
 
 		CV_PROP_RW int nfeatures;
 		CV_PROP_RW int nOctaveLayers;
