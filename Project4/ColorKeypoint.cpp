@@ -46,7 +46,7 @@
 //#include "precomp.hpp"
 #include "ColorKeypoint.h"
 
-#define VEC3_SQR_MAG(r, g, b) r*r + g*g + b*b
+#define VEC3_SQR_MAG(r, g, b) sqrt(r*r + g*g + b*b)
 
 
 namespace cv

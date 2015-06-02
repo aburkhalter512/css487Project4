@@ -73,15 +73,15 @@ namespace cv
 		CV_WRAP int descriptorType() const;
 
 		//! finds the keypoints using SIFT algorithm
-		void operator()(InputArray img, InputArray mask,
+		virtual void operator()(InputArray img, InputArray mask,
 			vector<KeyPoint>& keypoints) const;
 		//! finds the keypoints and computes descriptors for them using SIFT algorithm.
 		//! Optionally it can compute descriptors for the user-provided keypoints
-		void operator()(InputArray img, InputArray mask,
+		virtual void operator()(InputArray img, InputArray mask,
 			vector<KeyPoint>& keypoints,
 			OutputArray descriptors,
 			bool useProvidedKeypoints = false) const;
-		void operator()(InputArray img, InputArray mask,
+		virtual void operator()(InputArray img, InputArray mask,
 			vector<ColorKeypoint>& keypoints,
 			OutputArray descriptors,
 			bool useProvidedKeypoints = false) const;

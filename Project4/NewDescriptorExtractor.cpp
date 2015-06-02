@@ -625,7 +625,7 @@ namespace cv
 		return true;
 	}
 
-
+	/*
 	//
 	// Detects features at extrema in DoG scale space.  Bad features are discarded
 	// based on contrast and ratio of principal curvatures.
@@ -777,6 +777,7 @@ namespace cv
 				}
 			}
 	}
+	*/
 	void NEWSIFT::findScaleSpaceExtrema(const vector<Mat>& gauss_pyr, const vector<Mat>& dog_pyr,
 		vector<KeyPoint>& keypoints) const
 	{
@@ -1004,173 +1005,6 @@ namespace cv
 #endif
 	}
 
-
-	static void calcNEWSIFTDescriptor(const Mat& img, Point2f ptf, float ori, Vec3b color, float scl,
-		int d, int n, float* dst)
-	{
-		Point pt(cvRound(ptf.x), cvRound(ptf.y));
-		float cos_t = cosf(ori*(float)(CV_PI / 180));
-		float sin_t = sinf(ori*(float)(CV_PI / 180));
-		float bins_per_rad = n / 360.f;
-		float exp_scale = -1.f / (d * d * 0.5f);
-		float hist_width = NEWSIFT_DESCR_SCL_FCTR * scl;
-		int radius = cvRound(hist_width * 1.4142135623730951f * (d + 1) * 0.5f);
-		// Clip the radius to the diagonal of the image to avoid autobuffer too large exception
-		radius = std::min(radius, (int)sqrt((double)img.cols*img.cols + img.rows*img.rows));
-		cos_t /= hist_width;
-		sin_t /= hist_width;
-
-		int i, j, k, len = (radius * 2 + 1)*(radius * 2 + 1), histlen = (d + 2)*(d + 2)*(n + 2);
-		int rows = img.rows, cols = img.cols;
-
-		AutoBuffer<float> buf(len * 6 + histlen);
-		float *X = buf, *Y = X + len, *Mag = Y, *Ori = Mag + len, *W = Ori + len;
-		float *RBin = W + len, *CBin = RBin + len, *hist = CBin + len;
-
-		for (i = 0; i < d + 2; i++)
-		{
-			for (j = 0; j < d + 2; j++)
-				for (k = 0; k < n + 2; k++)
-					hist[(i*(d + 2) + j)*(n + 2) + k] = 0.;
-		}
-
-		for (i = -radius, k = 0; i <= radius; i++)
-			for (j = -radius; j <= radius; j++)
-			{
-				// Calculate sample's histogram array coords rotated relative to ori.
-				// Subtract 0.5 so samples that fall e.g. in the center of row 1 (i.e.
-				// r_rot = 1.5) have full weight placed in row 1 after interpolation.
-				float c_rot = j * cos_t - i * sin_t;
-				float r_rot = j * sin_t + i * cos_t;
-				float rbin = r_rot + d / 2 - 0.5f;
-				float cbin = c_rot + d / 2 - 0.5f;
-				int r = pt.y + i, c = pt.x + j;
-
-				if (rbin > -1 && rbin < d && cbin > -1 && cbin < d &&
-					r > 0 && r < rows - 1 && c > 0 && c < cols - 1)
-				{
-					float dx = (float)(img.at<NEWSIFT_wt>(r, c + 1) - img.at<NEWSIFT_wt>(r, c - 1));
-					float dy = (float)(img.at<NEWSIFT_wt>(r - 1, c) - img.at<NEWSIFT_wt>(r + 1, c));
-					X[k] = dx; Y[k] = dy; RBin[k] = rbin; CBin[k] = cbin;
-					W[k] = (c_rot * c_rot + r_rot * r_rot)*exp_scale;
-					k++;
-				}
-			}
-
-		len = k;
-		fastAtan2(Y, X, Ori, len, true);
-		magnitude(X, Y, Mag, len);
-		exp(W, W, len);
-
-		for (k = 0; k < len; k++)
-		{
-			float rbin = RBin[k], cbin = CBin[k];
-			float obin = (Ori[k] - ori)*bins_per_rad;
-			float mag = Mag[k] * W[k];
-
-			int r0 = cvFloor(rbin);
-			int c0 = cvFloor(cbin);
-			int o0 = cvFloor(obin);
-			rbin -= r0;
-			cbin -= c0;
-			obin -= o0;
-
-			if (o0 < 0)
-				o0 += n;
-			if (o0 >= n)
-				o0 -= n;
-
-			// histogram update using tri-linear interpolation
-			float v_r1 = mag*rbin, v_r0 = mag - v_r1;
-			float v_rc11 = v_r1*cbin, v_rc10 = v_r1 - v_rc11;
-			float v_rc01 = v_r0*cbin, v_rc00 = v_r0 - v_rc01;
-			float v_rco111 = v_rc11*obin, v_rco110 = v_rc11 - v_rco111;
-			float v_rco101 = v_rc10*obin, v_rco100 = v_rc10 - v_rco101;
-			float v_rco011 = v_rc01*obin, v_rco010 = v_rc01 - v_rco011;
-			float v_rco001 = v_rc00*obin, v_rco000 = v_rc00 - v_rco001;
-
-			int idx = ((r0 + 1)*(d + 2) + c0 + 1)*(n + 2) + o0;
-			hist[idx] += v_rco000;
-			hist[idx + 1] += v_rco001;
-			hist[idx + (n + 2)] += v_rco010;
-			hist[idx + (n + 3)] += v_rco011;
-			hist[idx + (d + 2)*(n + 2)] += v_rco100;
-			hist[idx + (d + 2)*(n + 2) + 1] += v_rco101;
-			hist[idx + (d + 3)*(n + 2)] += v_rco110;
-			hist[idx + (d + 3)*(n + 2) + 1] += v_rco111;
-		}
-
-		// finalize histogram, since the orientation histograms are circular
-		for (i = 0; i < d; i++)
-			for (j = 0; j < d; j++)
-			{
-				int idx = ((i + 1)*(d + 2) + (j + 1))*(n + 2);
-				hist[idx] += hist[idx + n];
-				hist[idx + 1] += hist[idx + n + 1];
-				for (k = 0; k < n; k++)
-					dst[(i*d + j)*n + k] = hist[idx + k];
-			}
-		// copy histogram to the descriptor,
-		// apply hysteresis thresholding
-		// and scale the result, so that it can be easily converted
-		// to byte array
-		float nrm2 = 0;
-		len = d*d*n;
-		for (k = 0; k < len; k++)
-			nrm2 += dst[k] * dst[k];
-		float thr = std::sqrt(nrm2)*NEWSIFT_DESCR_MAG_THR;
-		for (i = 0, nrm2 = 0; i < k; i++)
-		{
-			float val = std::min(dst[i], thr);
-			dst[i] = val;
-			nrm2 += val*val;
-		}
-		nrm2 = NEWSIFT_INT_DESCR_FCTR / std::max(std::sqrt(nrm2), FLT_EPSILON);
-
-#if 1
-		for (k = 0; k < len; k++)
-		{
-			dst[k] = saturate_cast<uchar>(dst[k] * nrm2);
-		}
-#else
-		float nrm1 = 0;
-		for (k = 0; k < len; k++)
-		{
-			dst[k] *= nrm2;
-			nrm1 += dst[k];
-		}
-		nrm1 = 1.f / std::max(nrm1, FLT_EPSILON);
-		for (k = 0; k < len; k++)
-		{
-			dst[k] = std::sqrt(dst[k] * nrm1);//saturate_cast<uchar>(std::sqrt(dst[k] * nrm1)*NEWSIFT_INT_DESCR_FCTR);
-		}
-#endif
-	}
-
-	static void calcDescriptors(const vector<Mat>& gpyr, const vector<ColorKeypoint>& keypoints,
-		Mat& descriptors, int nOctaveLayers, int firstOctave)
-	{
-		int d = NEWSIFT_DESCR_WIDTH, n = NEWSIFT_DESCR_HIST_BINS;
-
-		for (size_t i = 0; i < keypoints.size(); i++)
-		{
-			ColorKeypoint kpt = keypoints[i];
-			int octave, layer;
-			float scale;
-			unpackOctave(kpt, octave, layer, scale);
-			CV_Assert(octave >= firstOctave && layer <= nOctaveLayers + 2);
-			float size = kpt.size*scale;
-			Point2f ptf(kpt.pt.x*scale, kpt.pt.y*scale);
-			const Mat& img = gpyr[(octave - firstOctave)*(nOctaveLayers + 3) + layer];
-			
-			float angle = 360.f - kpt.angle;
-			if (std::abs(angle - 360.f) < FLT_EPSILON)
-				angle = 0.f;
-			Vec3b color = kpt.color;
-			calcNEWSIFTDescriptor(img, ptf, angle, color, size*0.5f, d, n, descriptors.ptr<float>((int)i));
-		}
-	}
-
 	static void calcDescriptors(const vector<Mat>& gpyr, const vector<KeyPoint>& keypoints,
 		Mat& descriptors, int nOctaveLayers, int firstOctave)
 	{
@@ -1218,94 +1052,6 @@ namespace cv
 		vector<KeyPoint>& keypoints) const
 	{
 		(*this)(_image, _mask, keypoints, noArray());
-	}
-
-	void NEWSIFT::operator()(InputArray _image, InputArray _mask,
-		vector<ColorKeypoint>& keypoints,
-		OutputArray _descriptors,
-		bool useProvidedKeypoints) const
-	{
-		int firstOctave = -1, actualNOctaves = 0, actualNLayers = 0;
-		Mat image = _image.getMat(), mask = _mask.getMat();
-
-		if (image.empty() || image.depth() != CV_8U)
-			CV_Error(CV_StsBadArg, "image is empty or has incorrect depth (!=CV_8U)");
-
-		if (!mask.empty() && mask.type() != CV_8UC1)
-			CV_Error(CV_StsBadArg, "mask has incorrect type (!=CV_8UC1)");
-
-		if (useProvidedKeypoints)
-		{
-			firstOctave = 0;
-			int maxOctave = INT_MIN;
-			for (size_t i = 0; i < keypoints.size(); i++)
-			{
-				int octave, layer;
-				float scale;
-				unpackOctave(keypoints[i], octave, layer, scale);
-				firstOctave = std::min(firstOctave, octave);
-				maxOctave = std::max(maxOctave, octave);
-				actualNLayers = std::max(actualNLayers, layer - 2);
-			}
-
-			firstOctave = std::min(firstOctave, 0);
-			CV_Assert(firstOctave >= -1 && actualNLayers <= nOctaveLayers);
-			actualNOctaves = maxOctave - firstOctave + 1;
-		}
-
-		Mat base = createInitialImage(image, firstOctave < 0, (float)sigma);
-		vector<Mat> gpyr, dogpyr;
-		int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(log((double)std::min(base.cols, base.rows)) / log(2.) - 2) - firstOctave;
-
-		//double t, tf = getTickFrequency();
-		//t = (double)getTickCount();
-		buildGaussianPyramid(base, gpyr, nOctaves);
-		buildDoGPyramid(gpyr, dogpyr);
-
-		//t = (double)getTickCount() - t;
-		//printf("pyramid construction time: %g\n", t*1000./tf);
-
-		if (!useProvidedKeypoints)
-		{
-			//t = (double)getTickCount();
-			findScaleSpaceExtrema(gpyr, dogpyr, keypoints);
-			ColorKeyPointsFilter::removeDuplicated(keypoints);
-
-			if (nfeatures > 0)
-				ColorKeyPointsFilter::retainBest(keypoints, nfeatures);
-			//t = (double)getTickCount() - t;
-			//printf("keypoint detection time: %g\n", t*1000./tf);
-
-			if (firstOctave < 0)
-				for (size_t i = 0; i < keypoints.size(); i++)
-				{
-					ColorKeypoint& kpt = keypoints[i];
-					float scale = 1.f / (float)(1 << -firstOctave);
-					kpt.octave = (kpt.octave & ~255) | ((kpt.octave + firstOctave) & 255);
-					kpt.pt *= scale;
-					kpt.size *= scale;
-				}
-
-			if (!mask.empty())
-				ColorKeyPointsFilter::runByPixelsMask(keypoints, mask);
-		}
-		else
-		{
-			// filter keypoints by mask
-			//KeyPointsFilter::runByPixelsMask( keypoints, mask );
-		}
-
-		if (_descriptors.needed())
-		{
-			//t = (double)getTickCount();
-			int dsize = descriptorSize();
-			_descriptors.create((int)keypoints.size(), dsize, CV_32F);
-			Mat descriptors = _descriptors.getMat();
-
-			calcDescriptors(gpyr, keypoints, descriptors, nOctaveLayers, firstOctave);
-			//t = (double)getTickCount() - t;
-			//printf("descriptor extraction time: %g\n", t*1000./tf);
-		}
 	}
 
 	void NEWSIFT::operator()(InputArray _image, InputArray _mask,
