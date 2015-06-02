@@ -11,17 +11,17 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\ColorKeypoint.h" />
     <ClInclude Include="..\DescriptorType.h" />
     <ClInclude Include="..\DescriptorUtil.h" />
     <ClInclude Include="..\NewDescriptorExtractor.h" />
     <ClInclude Include="..\ScriptData.h" />
+    <ClInclude Include="ColorDescriptorExtractor.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\ColorKeypoint.cpp" />
     <ClCompile Include="..\DescriptorUtil.cpp" />
     <ClCompile Include="..\main.cpp" />
     <ClCompile Include="..\NewDescriptorExtractor.cpp" />
+    <ClCompile Include="ColorDescriptorExtractor.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{840C1812-DDED-40BC-8D68-5A00ADE9D6DB}</ProjectGuid>
@@ -59,7 +59,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\Adam\Desktop\CSS 487\css487Project4\code\example\example;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Adam\Desktop\CSS 487\css487Project4\Project4;C:\Users\Adam\Desktop\CSS 487\css487Project4\Project4\example;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

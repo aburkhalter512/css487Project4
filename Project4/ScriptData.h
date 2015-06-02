@@ -66,7 +66,7 @@ struct ScriptData {
 			for (int i = 0; i < numImgs - 1; i++) {
 				// Read and construct the homography matrix for each image pair
 				string homographyFile = args[argc++];
-				cout << ">> Homography file: " << homographyFile << endl;
+				cout << ">> Homography file: " << relativePath << homographyFile << endl;
                 double tmpArray[9];
 				ifstream hFile(relativePath + homographyFile);
 				if (!hFile.is_open()) {

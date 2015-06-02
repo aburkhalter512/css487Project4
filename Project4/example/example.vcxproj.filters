@@ -27,8 +27,8 @@
     <ClInclude Include="..\ScriptData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ColorKeypoint.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="ColorDescriptorExtractor.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -41,7 +41,7 @@
     <ClCompile Include="..\NewDescriptorExtractor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ColorKeypoint.cpp">
+    <ClCompile Include="ColorDescriptorExtractor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

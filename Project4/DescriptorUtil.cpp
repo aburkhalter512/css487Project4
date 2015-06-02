@@ -6,6 +6,7 @@ This class provides utilities for computing key points and different types of de
 
 #include "DescriptorUtil.h"
 #include "NewDescriptorExtractor.h"
+#include "ColorDescriptorExtractor.h"
 #include <opencv2\nonfree\features2d.hpp>
 
 #include <iostream>
@@ -84,6 +85,11 @@ Mat DescriptorUtil::computeDescriptors(Mat& img, vector<KeyPoint> &keypoints, DE
         OpponentColorDescriptorExtractor opponentExtractor(siftExtractor);
         opponentExtractor.compute(img, kpts, descriptors);
     }
+	else if (type == COLOR_DESCR)
+	{
+		ColorDescriptorExtractor cde;
+		cde.compute(img, kpts, descriptors);
+	}
 	else if (type == NONE) { }
 
     return descriptors;

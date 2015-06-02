@@ -13,7 +13,7 @@ using namespace std;
 
 // Enum of the four basic descriptor types that have been implemented so far
 enum DESC_TYPES {
-    GRAY_SIFT, GRAY_SURF, OPPONENT_SIFT, NEW_DESCRIPTOR, NONE
+    GRAY_SIFT, GRAY_SURF, OPPONENT_SIFT, NEW_DESCRIPTOR, COLOR_DESCR, NONE
 };
 
 // A struct that holds the type of a descriptor
@@ -35,7 +35,9 @@ struct DescriptorType {
 		} 
 		else if (code == "NEWSIFT") {
 			return NEW_DESCRIPTOR;
-		} 
+		}
+		else if (code == "COLORSIFT")
+			return COLOR_DESCR;
 		else {
             return NONE;
         }
