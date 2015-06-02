@@ -76,6 +76,8 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		cout << ">> Finished creating all descriptors." << endl;
+
 		// Save descriptors if save flag is set
 		// data.saveData = true;
 
