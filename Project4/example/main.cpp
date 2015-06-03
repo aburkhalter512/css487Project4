@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
 	if (argc == 1) {
 
 #ifdef _DEBUG
-#if 0
+#if 1
 		// Used a good set of sample parameters
 		argv = new char*[8];
 		argv[0] = "example.exe";
@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
 		argv[3] = "img1.ppm";
 		argv[4] = "img2.ppm";
 		argv[5] = "1";
-		argv[6] = "NEWSIFT";
+		argv[6] = "COLORSIFT";
 		argv[7] = "H1to2p.txt";
 #elif 0
 		// Used to test an abscense of a homography file
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 		argv[5] = "1";
 		argv[6] = "SIFT";
 		argv[7] = "1to1.txt";
-#elif 1
+#elif 0
 		// Used to test an abscense of a homography file
 		argv = new char*[8];
 		argv[0] = "example.exe";
@@ -51,6 +51,33 @@ int main(int argc, char *argv[]) {
 		argv[5] = "1";
 		argv[6] = "COLORSIFT";
 		argv[7] = "1to1.txt";
+#elif 0
+		argv[0] = "example.exe";
+		argv[1] = "../images/test/";
+		argv[2] = "2";
+		argv[3] = "circle.png";
+		argv[4] = "circle45cclock.png";
+		argv[5] = "1";
+		argv[6] = "COLORSIFT";
+		argv[7] = "1to45cClock.txt";
+#elif 1
+		argv[0] = "example.exe";
+		argv[1] = "../images/test/";
+		argv[2] = "2";
+		argv[3] = "circle.png";
+		argv[4] = "circle40x40translation.png";
+		argv[5] = "1";
+		argv[6] = "COLORSIFT";
+		argv[7] = "1to40x40translation.txt";
+#elif 0
+		argv[0] = "example.exe";
+		argv[1] = "../images/test/";
+		argv[2] = "2";
+		argv[3] = "circle.png";
+		argv[4] = "circle1.05scale.png";
+		argv[5] = "1";
+		argv[6] = "COLORSIFT";
+		argv[7] = "1to1.05scale.txt";
 #endif
 #else
 		argv = new char*[8];

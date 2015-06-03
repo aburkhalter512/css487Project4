@@ -376,7 +376,7 @@ namespace cv
 				descriptor);
 			LOG("Done.");
 
-#ifdef _DEBUG
+#ifdef INCLUDE_LOGGING
 			timingMark = timing.append_child("mark");
 			timingMark.append_attribute("metric").set_value("second");
 			timingMark.append_attribute("time").set_value((float)(getTickCount() - startTime) / getTickFrequency());
@@ -426,7 +426,7 @@ namespace cv
 #endif
 		}
 
-#ifdef _DEBUG
+#ifdef INCLUDE_LOGGING
 		std::cout << "Press enter to continue..." << std::endl;
 		std::cin.get();
 
@@ -507,7 +507,7 @@ namespace cv
 				KeyPointsFilter::runByPixelsMask(keypoints, mask);
 		}
 
-#ifdef _DEBUG
+#ifdef INCLUDE_LOGGING
 		LOG("========== Keypoints ==========");
 
 		for (size_t i = 0; i < keypoints.size(); i++)
