@@ -92,17 +92,6 @@ Mat DescriptorUtil::computeDescriptors(Mat& img, vector<KeyPoint> &keypoints, DE
 	else if (type == COLOR_DESCR)
 	{
 		ColorDescriptorExtractor cde;
-		
-#ifdef _DEBUG
-		time_t     now = time(0);
-		struct tm  tstruct;
-		char       buf[80];
-		localtime_s(&tstruct, &now);
-		strftime(buf, sizeof(buf), "%Y-%m-%d--%H-%M-%S", &tstruct);
-
-		string filename = "descriptor-";
-		cde.descriptorsFile(filename + buf + ".xml");
-#endif
 		cde.compute(img, kpts, descriptors);
 	}
 	else if (type == NONE) { }

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<root>
+	<keypoints>
+		<keypoint point="147.968948, 147.827972" angle="289.602173" size="1.95647049" octave="6160895" />
+		<keypoint point="151.072998, 147.971542" angle="70.0901184" size="1.88152182" octave="3342847" />
+		<keypoint point="53.195473, 36.894775" angle="49.9810791" size="3.79696321" octave="3997952" />
+		<keypoint point="145.811035, 151.184799" angle="27.6538391" size="3.92690969" octave="6422784" />
+		<keypoint point="10.398322, 100.923462" angle="15.3638" size="5.29068804" octave="11272704" />
+		<keypoint point="290.970215, 107.640038" angle="158.841476" size="5.5638938" octave="14942720" />
+		<keypoint point="65.850746, 270.978668" angle="307.863434" size="5.39061213" octave="12648960" />
+		<keypoint point="12.732972, 99.691887" angle="16.1460876" size="8.2220211" octave="9765121" />
+		<keypoint point="20.585657, 94.785294" angle="23.3778381" size="16.5178642" octave="10092802" />
+		<keypoint point="77.573006, 268.994080" angle="310.920807" size="18.6418362" octave="2097666" />
+		<keypoint point="109.690338, 163.706543" angle="25.1902466" size="39.570488" octave="6423043" />
+		<keypoint point="244.608551, 241.451447" angle="225.265381" size="31.6097698" octave="6881539" />
+		<keypoint point="60.924232, 72.801857" angle="42.9050293" size="50.9224548" octave="7996163" />
+	</keypoints>
+</root>

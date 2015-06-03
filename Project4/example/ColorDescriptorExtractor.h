@@ -26,10 +26,11 @@ namespace cv
 
 		AlgorithmInfo* info() const;
 
-#ifdef _DEBUG
-		void keypointsFile(string filename);
-		void descriptorsFile(string filename);
-#endif
+		// default width of descriptor histogram array
+		static const int COLOR_DESCR_WIDTH = 4;
+
+		// default number of bins per histogram in descriptor array
+		static const int COLOR_DESCR_HIST_BINS = 2;
 
 	private:
 		void calcColorDescriptor(const Mat&, Point2f, float, float, int, int, float*) const;
@@ -39,10 +40,5 @@ namespace cv
 		{
 			(*this)(image, Mat(), keypoints, descriptors, true);
 		}
-
-#ifdef _DEBUG
-		string _keypointsFilename;
-		string _descriptorsFilename;
-#endif
 	};
 }
