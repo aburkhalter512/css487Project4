@@ -12,6 +12,7 @@ namespace cv
 
 		//! returns the descriptor size in floats (128)
 		CV_WRAP int descriptorSize() const;
+		CV_WRAP int descriptorType() const;
 
 		//! finds the keypoints using SIFT algorithm
 		void operator()(InputArray img, InputArray mask,
@@ -25,6 +26,11 @@ namespace cv
 
 		AlgorithmInfo* info() const;
 
+#ifdef _DEBUG
+		void keypointsFile(string filename);
+		void descriptorsFile(string filename);
+#endif
+
 	private:
 		void calcColorDescriptor(const Mat&, Point2f, float, float, int, int, float*) const;
 		void calcColorDescriptors(const vector<Mat>&, const vector<KeyPoint>&, Mat&, int, int) const;
@@ -33,5 +39,10 @@ namespace cv
 		{
 			(*this)(image, Mat(), keypoints, descriptors, true);
 		}
+
+#ifdef _DEBUG
+		string _keypointsFilename;
+		string _descriptorsFilename;
+#endif
 	};
 }

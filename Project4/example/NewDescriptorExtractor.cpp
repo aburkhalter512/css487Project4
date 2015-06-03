@@ -105,7 +105,6 @@ Below is the original copyright.
 #include "NewDescriptorExtractor.h"
 #include <iostream>
 #include <stdarg.h>
-#include "ColorKeypoint.h"
 
 #define INDEX_3D_TO_1D(i, j, k, dimensionSize) i + dimensionSize * j + dimensionSize * dimensionSize * k
 
@@ -180,16 +179,6 @@ namespace cv
 	typedef float NEWSIFT_wt;
 	static const int NEWSIFT_FIXPT_SCALE = 1;
 #endif
-
-	static inline void
-		unpackOctave(const ColorKeypoint& kpt, int& octave, int& layer, float& scale)
-	{
-		octave = kpt.octave & 255;
-		layer = (kpt.octave >> 8) & 255;
-		octave = octave < 128 ? octave : (-128 | octave);
-		scale = octave >= 0 ? 1.f / (1 << octave) : (float)(1 << -octave);
-	}
-
 	static inline void
 		unpackOctave(const KeyPoint& kpt, int& octave, int& layer, float& scale)
 	{
@@ -225,7 +214,6 @@ namespace cv
 			return gray_fpt;
 		}
 	}
-
 
 	void NEWSIFT::buildGaussianPyramid(const Mat& base, vector<Mat>& pyr, int nOctaves) const
 	{
@@ -266,7 +254,6 @@ namespace cv
 		}
 	}
 
-
 	void NEWSIFT::buildDoGPyramid(const vector<Mat>& gpyr, vector<Mat>& dogpyr) const
 	{
 		int nOctaves = (int)gpyr.size() / (nOctaveLayers + 3);
@@ -282,70 +269,6 @@ namespace cv
 				subtract(src2, src1, dst, noArray(), DataType<NEWSIFT_wt>::type);
 			}
 		}
-	}
-
-
-	/*
-	//Mat& img --- source image
-	//Point pt --- center point
-	//int radius --- radius of keypoint area
-	//float sigma --- data on keypoint size and blur level
-	//int* hist --- histogram of colors, smoothed around the center pt
-	//int bucketCount --- number of buckets for each color in the hist
-	*/
-	static float calcColorHist(const Mat& img, Point pt, int radius,
-		float sigma, float* hist, int bucketCount)
-	{
-		//step 1: allocate necessary memory/initialize values
-		int len = (radius * 2 + 1)*(radius * 2 + 1);
-		float gaussScale = -1.f / (2.f * sigma * sigma);
-		float *gaussWeight = new float[len];
-		const int R = 0;
-		const int G = 1;
-		const int B = 2;
-		int bucketIndex[3] = { 0, 0, 0 };
-
-		//Process each pixel in a radius around the center pixel:
-		//	1. Collect color data from each pixel
-		//	2. Weight its importance according to distance using a guassian ratio
-		for (int i = -radius, k = 0; i <= radius; i++)
-		{
-			int y = pt.y + i;
-			if (y <= 0 || y >= img.rows - 1)
-				continue;
-			for (int j = -radius; j <= radius; j++)
-			{
-				int x = pt.x + j;
-				if (x <= 0 || x >= img.cols - 1)
-					continue;
-				
-				//put smoothed pixel color values into correct buckets
-				for (int color = R; color <= B; color++)
-				{
-					bucketIndex[color] = (int)
-						  (.5  * img.at<Vec3b>(y, x)[color]
-						* .25 * img.at<Vec3b>(y, x)[(color - 1) % B]
-						* .25 * img.at<Vec3b>(y, x)[(color + 1) % B]
-						* bucketCount / 256);
-				}
-
-				//make gaussian weight ratios for each pixel in the keypoint area
-				gaussWeight[k] = exp((i*i + j*j)*gaussScale);
-
-				//add weighted buckets to 1D histogram
-				hist[bucketIndex[R] + bucketCount * bucketIndex[G] + bucketCount * bucketCount * bucketIndex[B]]+= gaussWeight[k];
-
-				k++;
-			}
-		}
-
-		delete[] gaussWeight;
-
-		float maxval = hist[0];
-		for (int i = 1; i < bucketCount; i++)
-			maxval = std::max(maxval, hist[i]);
-
-		return maxval;
 	}
 
 	// Computes a gradient orientation histogram at a specified pixel
@@ -415,108 +338,6 @@ namespace cv
 			maxval = std::max(maxval, hist[i]);
 
 		return maxval;
-	}
-
-	static bool adjustLocalExtrema(const vector<Mat>& dog_pyr, ColorKeypoint& kpt, int octv,
-		int& layer, int& r, int& c, int nOctaveLayers,
-		float contrastThreshold, float edgeThreshold, float sigma)
-	{
-		const float img_scale = 1.f / (255 * NEWSIFT_FIXPT_SCALE);
-		const float deriv_scale = img_scale*0.5f;
-		const float second_deriv_scale = img_scale;
-		const float cross_deriv_scale = img_scale*0.25f;
-
-		float xi = 0, xr = 0, xc = 0, contr = 0;
-		int i = 0;
-
-		for (; i < NEWSIFT_MAX_INTERP_STEPS; i++)
-		{
-			int idx = octv*(nOctaveLayers + 2) + layer;
-			const Mat& img = dog_pyr[idx];
-			const Mat& prev = dog_pyr[idx - 1];
-			const Mat& next = dog_pyr[idx + 1];
-
-			Vec3f dD((img.at<NEWSIFT_wt>(r, c + 1) - img.at<NEWSIFT_wt>(r, c - 1))*deriv_scale,
-				(img.at<NEWSIFT_wt>(r + 1, c) - img.at<NEWSIFT_wt>(r - 1, c))*deriv_scale,
-				(next.at<NEWSIFT_wt>(r, c) - prev.at<NEWSIFT_wt>(r, c))*deriv_scale);
-
-			float v2 = (float)img.at<NEWSIFT_wt>(r, c) * 2;
-			float dxx = (img.at<NEWSIFT_wt>(r, c + 1) + img.at<NEWSIFT_wt>(r, c - 1) - v2)*second_deriv_scale;
-			float dyy = (img.at<NEWSIFT_wt>(r + 1, c) + img.at<NEWSIFT_wt>(r - 1, c) - v2)*second_deriv_scale;
-			float dss = (next.at<NEWSIFT_wt>(r, c) + prev.at<NEWSIFT_wt>(r, c) - v2)*second_deriv_scale;
-			float dxy = (img.at<NEWSIFT_wt>(r + 1, c + 1) - img.at<NEWSIFT_wt>(r + 1, c - 1) -
-				img.at<NEWSIFT_wt>(r - 1, c + 1) + img.at<NEWSIFT_wt>(r - 1, c - 1))*cross_deriv_scale;
-			float dxs = (next.at<NEWSIFT_wt>(r, c + 1) - next.at<NEWSIFT_wt>(r, c - 1) -
-				prev.at<NEWSIFT_wt>(r, c + 1) + prev.at<NEWSIFT_wt>(r, c - 1))*cross_deriv_scale;
-			float dys = (next.at<NEWSIFT_wt>(r + 1, c) - next.at<NEWSIFT_wt>(r - 1, c) -
-				prev.at<NEWSIFT_wt>(r + 1, c) + prev.at<NEWSIFT_wt>(r - 1, c))*cross_deriv_scale;
-
-			Matx33f H(dxx, dxy, dxs,
-				dxy, dyy, dys,
-				dxs, dys, dss);
-
-			Vec3f X = H.solve(dD, DECOMP_LU);
-
-			xi = -X[2];
-			xr = -X[1];
-			xc = -X[0];
-
-			if (std::abs(xi) < 0.5f && std::abs(xr) < 0.5f && std::abs(xc) < 0.5f)
-				break;
-
-			if (std::abs(xi) > (float)(INT_MAX / 3) ||
-				std::abs(xr) > (float)(INT_MAX / 3) ||
-				std::abs(xc) > (float)(INT_MAX / 3))
-				return false;
-
-			c += cvRound(xc);
-			r += cvRound(xr);
-			layer += cvRound(xi);
-
-			if (layer < 1 || layer > nOctaveLayers ||
-				c < NEWSIFT_IMG_BORDER || c >= img.cols - NEWSIFT_IMG_BORDER ||
-				r < NEWSIFT_IMG_BORDER || r >= img.rows - NEWSIFT_IMG_BORDER)
-				return false;
-		}
-
-		// ensure convergence of interpolation
-		if (i >= NEWSIFT_MAX_INTERP_STEPS)
-			return false;
-
-		{
-			int idx = octv*(nOctaveLayers + 2) + layer;
-			const Mat& img = dog_pyr[idx];
-			const Mat& prev = dog_pyr[idx - 1];
-			const Mat& next = dog_pyr[idx + 1];
-			Matx31f dD((img.at<NEWSIFT_wt>(r, c + 1) - img.at<NEWSIFT_wt>(r, c - 1))*deriv_scale,
-				(img.at<NEWSIFT_wt>(r + 1, c) - img.at<NEWSIFT_wt>(r - 1, c))*deriv_scale,
-				(next.at<NEWSIFT_wt>(r, c) - prev.at<NEWSIFT_wt>(r, c))*deriv_scale);
-			float t = dD.dot(Matx31f(xc, xr, xi));
-
-			contr = img.at<NEWSIFT_wt>(r, c)*img_scale + t * 0.5f;
-			if (std::abs(contr) * nOctaveLayers < contrastThreshold)
-				return false;
-
-			// principal curvatures are computed using the trace and det of Hessian
-			float v2 = img.at<NEWSIFT_wt>(r, c)*2.f;
-			float dxx = (img.at<NEWSIFT_wt>(r, c + 1) + img.at<NEWSIFT_wt>(r, c - 1) - v2)*second_deriv_scale;
-			float dyy = (img.at<NEWSIFT_wt>(r + 1, c) + img.at<NEWSIFT_wt>(r - 1, c) - v2)*second_deriv_scale;
-			float dxy = (img.at<NEWSIFT_wt>(r + 1, c + 1) - img.at<NEWSIFT_wt>(r + 1, c - 1) -
-				img.at<NEWSIFT_wt>(r - 1, c + 1) + img.at<NEWSIFT_wt>(r - 1, c - 1)) * cross_deriv_scale;
-			float tr = dxx + dyy;
-			float det = dxx * dyy - dxy * dxy;
-
-			if (det <= 0 || tr*tr*edgeThreshold >= (edgeThreshold + 1)*(edgeThreshold + 1)*det)
-				return false;
-		}
-
-		kpt.pt.x = (c + xc) * (1 << octv);
-		kpt.pt.y = (r + xr) * (1 << octv);
-		kpt.octave = octv + (layer << 8) + (cvRound((xi + 0.5) * 255) << 16);
-		kpt.size = sigma*powf(2.f, (layer + xi) / nOctaveLayers)*(1 << octv) * 2;
-		kpt.response = std::abs(contr);
-
-		return true;
 	}
 
 	//
@@ -625,159 +446,6 @@ namespace cv
 		return true;
 	}
 
-	/*
-	//
-	// Detects features at extrema in DoG scale space.  Bad features are discarded
-	// based on contrast and ratio of principal curvatures.
-	void NEWSIFT::findScaleSpaceExtrema(const vector<Mat>& gauss_pyr, const vector<Mat>& dog_pyr,
-		vector<ColorKeypoint>& keypoints) const
-	{
-		int nOctaves = (int)gauss_pyr.size() / (nOctaveLayers + 3);
-		int threshold = cvFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * NEWSIFT_FIXPT_SCALE);
-		const int COLOR_HIST_BUCKET_COUNT = 2;
-		float colorHist[COLOR_HIST_BUCKET_COUNT * COLOR_HIST_BUCKET_COUNT * COLOR_HIST_BUCKET_COUNT];
-		ColorKeypoint colorKeypoint;
-
-		keypoints.clear();
-
-		for (int o = 0; o < nOctaves; o++)
-			for (int i = 1; i <= nOctaveLayers; i++)
-			{
-				int idx = o*(nOctaveLayers + 2) + i;
-				const Mat& img = dog_pyr[idx];
-				const Mat& prev = dog_pyr[idx - 1];
-				const Mat& next = dog_pyr[idx + 1];
-				int step = (int)img.step1();
-				int rows = img.rows, cols = img.cols;
-
-				for (int r = NEWSIFT_IMG_BORDER; r < rows - NEWSIFT_IMG_BORDER; r++)
-				{
-					const NEWSIFT_wt* currptr = img.ptr<NEWSIFT_wt>(r);
-					const NEWSIFT_wt* prevptr = prev.ptr<NEWSIFT_wt>(r);
-					const NEWSIFT_wt* nextptr = next.ptr<NEWSIFT_wt>(r);
-
-					for (int c = NEWSIFT_IMG_BORDER; c < cols - NEWSIFT_IMG_BORDER; c++)
-					{
-						NEWSIFT_wt val = currptr[c];
-
-						// find local extrema with pixel accuracy
-						if (std::abs(val) > threshold &&
-							((val > 0 && val >= currptr[c - 1] && val >= currptr[c + 1] &&
-							val >= currptr[c - step - 1] && val >= currptr[c - step] && val >= currptr[c - step + 1] &&
-							val >= currptr[c + step - 1] && val >= currptr[c + step] && val >= currptr[c + step + 1] &&
-							val >= nextptr[c] && val >= nextptr[c - 1] && val >= nextptr[c + 1] &&
-							val >= nextptr[c - step - 1] && val >= nextptr[c - step] && val >= nextptr[c - step + 1] &&
-							val >= nextptr[c + step - 1] && val >= nextptr[c + step] && val >= nextptr[c + step + 1] &&
-							val >= prevptr[c] && val >= prevptr[c - 1] && val >= prevptr[c + 1] &&
-							val >= prevptr[c - step - 1] && val >= prevptr[c - step] && val >= prevptr[c - step + 1] &&
-							val >= prevptr[c + step - 1] && val >= prevptr[c + step] && val >= prevptr[c + step + 1]) ||
-							(val < 0 && val <= currptr[c - 1] && val <= currptr[c + 1] &&
-							val <= currptr[c - step - 1] && val <= currptr[c - step] && val <= currptr[c - step + 1] &&
-							val <= currptr[c + step - 1] && val <= currptr[c + step] && val <= currptr[c + step + 1] &&
-							val <= nextptr[c] && val <= nextptr[c - 1] && val <= nextptr[c + 1] &&
-							val <= nextptr[c - step - 1] && val <= nextptr[c - step] && val <= nextptr[c - step + 1] &&
-							val <= nextptr[c + step - 1] && val <= nextptr[c + step] && val <= nextptr[c + step + 1] &&
-							val <= prevptr[c] && val <= prevptr[c - 1] && val <= prevptr[c + 1] &&
-							val <= prevptr[c - step - 1] && val <= prevptr[c - step] && val <= prevptr[c - step + 1] &&
-							val <= prevptr[c + step - 1] && val <= prevptr[c + step] && val <= prevptr[c + step + 1])))
-						{
-							int r1 = r, c1 = c, layer = i;
-							if (!adjustLocalExtrema(dog_pyr, colorKeypoint, o, layer, r1, c1,
-								nOctaveLayers, (float)contrastThreshold,
-								(float)edgeThreshold, (float)sigma))
-								continue;
-							float scl_octv = colorKeypoint.size*0.5f / (1 << o);
-							float colorMax = calcColorHist(gauss_pyr[o*(nOctaveLayers + 3) + layer],
-								Point(c1, r1),
-								cvRound(NEWSIFT_ORI_RADIUS * scl_octv),
-								NEWSIFT_ORI_SIG_FCTR * scl_octv,
-								colorHist, COLOR_HIST_BUCKET_COUNT);
-							float colorThreshold = (float)(colorMax * NEWSIFT_ORI_PEAK_RATIO);
-
-							// Indices, not values
-							int aroundI[2];
-							int aroundJ[2];
-							int aroundK[2];
-							// Values, not indices, 0,1 are i values; 2,3 are j values; 4,5 are k values
-							float surroundingVals[6];
-
-							#define RED 0
-							#define GREEN 1
-							#define BLUE 2
-							#define PREV 0
-							#define NEXT 1
-							#define PREV_I 0
-							#define NEXT_I 1
-							#define PREV_J 2
-							#define NEXT_J 3
-							#define PREV_K 4
-							#define NEXT_K 5
-							for (int i = 0; i < COLOR_HIST_BUCKET_COUNT; i++)
-							{
-								aroundI[PREV] = (i == 0) ? COLOR_HIST_BUCKET_COUNT - 1 : i - 1;
-								aroundI[NEXT] = (i == COLOR_HIST_BUCKET_COUNT - 1) ? 0 : i + 1;
-								for (int j = 0; j < COLOR_HIST_BUCKET_COUNT; j++)
-								{
-									aroundJ[PREV] = (j == 0) ? COLOR_HIST_BUCKET_COUNT - 1 : j - 1;
-									aroundJ[NEXT] = (j == COLOR_HIST_BUCKET_COUNT - 1) ? 0 : j + 1;
-
-									for (int k = 0; k < COLOR_HIST_BUCKET_COUNT; k++)
-									{
-										aroundK[PREV] = (k == 0) ? COLOR_HIST_BUCKET_COUNT - 1 : k - 1;
-										aroundK[NEXT] = (k == COLOR_HIST_BUCKET_COUNT - 1) ? 0 : k + 1;
-
-										int index = INDEX_3D_TO_1D(i, j, k, COLOR_HIST_BUCKET_COUNT);
-										surroundingVals[PREV_I] = colorHist[INDEX_3D_TO_1D(aroundI[PREV], j, k, COLOR_HIST_BUCKET_COUNT)];
-										surroundingVals[NEXT_I] = colorHist[INDEX_3D_TO_1D(aroundI[NEXT], j, k, COLOR_HIST_BUCKET_COUNT)];
-										surroundingVals[PREV_J] = colorHist[INDEX_3D_TO_1D(i, aroundJ[PREV], k, COLOR_HIST_BUCKET_COUNT)];
-										surroundingVals[NEXT_J] = colorHist[INDEX_3D_TO_1D(i, aroundJ[NEXT], k, COLOR_HIST_BUCKET_COUNT)];
-										surroundingVals[PREV_K] = colorHist[INDEX_3D_TO_1D(i, j, aroundK[PREV], COLOR_HIST_BUCKET_COUNT)];
-										surroundingVals[NEXT_K] = colorHist[INDEX_3D_TO_1D(i, j, aroundK[NEXT], COLOR_HIST_BUCKET_COUNT)];
-
-										if ( // Compare previous and next x-axis values in the hist
-											surroundingVals[PREV_I] < colorHist[index] &&
-											surroundingVals[NEXT_I] < colorHist[index] &&
-											// Compare previous and next y-axis values in the hist
-											surroundingVals[PREV_J] < colorHist[index] &&
-											surroundingVals[NEXT_J] < colorHist[index] &&
-											// Compare previous and next z-axis values in the hist
-											surroundingVals[PREV_K] < colorHist[index] &&
-											surroundingVals[NEXT_K] < colorHist[index] &&
-											colorHist[index] > colorThreshold)
-										{
-											float red = i + 0.5f *
-												(surroundingVals[PREV_I] - surroundingVals[NEXT_I]) /
-												(surroundingVals[PREV_I] - 2 * colorHist[index] + surroundingVals[NEXT_I]);
-											red = (red < 0) ? red + COLOR_HIST_BUCKET_COUNT :
-												(red > COLOR_HIST_BUCKET_COUNT) ? red - COLOR_HIST_BUCKET_COUNT : red;
-
-											float green = i + 0.5f *
-												(surroundingVals[PREV_J] - surroundingVals[NEXT_J]) /
-												(surroundingVals[PREV_J] - 2 * colorHist[index] + surroundingVals[NEXT_J]);
-											green = (green < 0) ? green + COLOR_HIST_BUCKET_COUNT :
-												(green > COLOR_HIST_BUCKET_COUNT) ? green - COLOR_HIST_BUCKET_COUNT : green;
-
-											float blue = i + 0.5f *
-												(surroundingVals[PREV_K] - surroundingVals[NEXT_K]) /
-												(surroundingVals[PREV_K] - 2 * colorHist[index] + surroundingVals[NEXT_K]);
-											blue = (blue < 0) ? blue + COLOR_HIST_BUCKET_COUNT :
-												(blue > COLOR_HIST_BUCKET_COUNT) ? blue - COLOR_HIST_BUCKET_COUNT : blue;
-
-											colorKeypoint.color(RED) = (uchar) red;
-											colorKeypoint.color(GREEN) = (uchar) green;
-											colorKeypoint.color(BLUE) = (uchar) blue;
-
-											keypoints.push_back(colorKeypoint);
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-	}
-	*/
 	void NEWSIFT::findScaleSpaceExtrema(const vector<Mat>& gauss_pyr, const vector<Mat>& dog_pyr,
 		vector<KeyPoint>& keypoints) const
 	{
@@ -1046,7 +714,6 @@ namespace cv
 	{
 		return CV_32F;
 	}
-
 
 	void NEWSIFT::operator()(InputArray _image, InputArray _mask,
 		vector<KeyPoint>& keypoints) const

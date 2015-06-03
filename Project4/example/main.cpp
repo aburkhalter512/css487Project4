@@ -4,6 +4,7 @@
 #include "DescriptorUtil.h"
 #include "DescriptorType.h"
 #include "ScriptData.h"
+#include "logging.h"
 
 #include <iostream>
 
@@ -15,15 +16,53 @@ int main(int argc, char *argv[]) {
 	DescriptorUtil descriptorUtil;
 
 	if (argc == 1) {
+
+#ifdef _DEBUG
+#if 0
+		// Used a good set of sample parameters
 		argv = new char*[8];
-		argv[0] = "../Debug/Program4.exe";
-		argv[1] = "./images/bark/";
+		argv[0] = "example.exe";
+		argv[1] = "../images/bark/";
 		argv[2] = "2";
 		argv[3] = "img1.ppm";
 		argv[4] = "img2.ppm";
 		argv[5] = "1";
 		argv[6] = "NEWSIFT";
 		argv[7] = "H1to2p.txt";
+#elif 0
+		// Used to test an abscense of a homography file
+		argv = new char*[8];
+		argv[0] = "example.exe";
+		argv[1] = "../images/test/";
+		argv[2] = "2";
+		argv[3] = "fireFlower.png";
+		argv[4] = "fireFlower.png";
+		argv[5] = "1";
+		argv[6] = "SIFT";
+		argv[7] = "1to1.txt";
+#elif 1
+		// Used to test an abscense of a homography file
+		argv = new char*[8];
+		argv[0] = "example.exe";
+		argv[1] = "../images/test/";
+		argv[2] = "2";
+		argv[3] = "circle.png";
+		argv[4] = "circle.png";
+		argv[5] = "1";
+		argv[6] = "COLORSIFT";
+		argv[7] = "1to1.txt";
+#endif
+#else
+		argv = new char*[8];
+		argv[0] = "example.exe";
+		argv[1] = "../images/bark/";
+		argv[2] = "2";
+		argv[3] = "img1.ppm";
+		argv[4] = "img2.ppm";
+		argv[5] = "1";
+		argv[6] = "NEWSIFT";
+		argv[7] = "H1to2p.txt";
+#endif
 	}
 
 	string scriptFilename = argv[1];
